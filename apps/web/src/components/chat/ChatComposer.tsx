@@ -55,6 +55,7 @@ import {
   type ReactNode,
   useCallback,
   useEffect,
+  useId,
   useImperativeHandle,
   useLayoutEffect,
   useMemo,
@@ -239,7 +240,11 @@ import {
 import { useEnvironmentQuery } from "~/state/query";
 import { useDebouncedValue } from "~/state/queries";
 import { ProviderModelPicker } from "./ProviderModelPicker";
-import { type ComposerCommandItem, ComposerCommandMenu } from "./ComposerCommandMenu";
+import {
+  type ComposerCommandItem,
+  ComposerCommandMenu,
+  composerCommandOptionDomId,
+} from "./ComposerCommandMenu";
 import { ComposerPendingApprovalActions } from "./ComposerPendingApprovalActions";
 import { CompactComposerControlsMenu } from "./CompactComposerControlsMenu";
 import { ComposerPrimaryActions } from "./ComposerPrimaryActions";
@@ -2461,6 +2466,17 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
   );
 
   const isComposerApprovalState = activePendingApproval !== null;
+
+  // The editor only references the listbox while it is actually rendered, so
+  // aria-controls and aria-activedescendant never point at missing nodes.
+  const composerMenuListboxId = useId();
+  const composerMenuListboxRendered =
+    composerMenuOpen && !isComposerApprovalState && composerMenuItems.length > 0;
+  const composerMenuActiveOptionDomId =
+    composerMenuListboxRendered && activeComposerMenuItem
+      ? composerCommandOptionDomId(composerMenuListboxId, activeComposerMenuItem.id)
+      : undefined;
+
   const activePendingUserInput = pendingUserInputs[0] ?? null;
   const isChoiceOnlyPendingQuestion =
     activePendingProgress?.activeQuestion?.allowCustomAnswer === false;
@@ -6216,6 +6232,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                 <ComposerCommandMenuLayer anchor={composerMenuAnchor}>
                   <ComposerCommandMenu
                     items={composerMenuItems}
+                    listboxId={composerMenuListboxId}
                     resolvedTheme={resolvedTheme}
                     isLoading={isComposerMenuLoading}
                     triggerKind={composerTriggerKind}
@@ -6638,6 +6655,8 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     onChange={onPromptChange}
                     onVisibleSelectionChange={expandComposerForEditorChange}
                     onCommandKeyDown={onComposerCommandKey}
+                    menuListboxId={composerMenuListboxRendered ? composerMenuListboxId : undefined}
+                    menuActiveOptionId={composerMenuActiveOptionDomId}
                     onPageScrollKeyDown={onPageScrollKeyDown}
                     onPageScrollKeyUp={onPageScrollKeyUp}
                     onPageScrollRelease={onPageScrollRelease}

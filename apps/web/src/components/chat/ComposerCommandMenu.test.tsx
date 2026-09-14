@@ -17,6 +17,7 @@ describe("ComposerCommandMenu", () => {
             description: "Switch response model for this thread",
           },
         ]}
+        listboxId="composer-menu"
         resolvedTheme="dark"
         isLoading={false}
         triggerKind="slash-command"
@@ -48,6 +49,7 @@ describe("ComposerCommandMenu", () => {
             description: "Open and control the in-app browser",
           },
         ]}
+        listboxId="composer-menu"
         resolvedTheme="dark"
         isLoading={false}
         triggerKind="skill"
@@ -83,6 +85,7 @@ describe("ComposerCommandMenu", () => {
             description: "Find the right skill or workflow",
           },
         ]}
+        listboxId="composer-menu"
         resolvedTheme="dark"
         isLoading={false}
         triggerKind="slash-command"

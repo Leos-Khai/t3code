@@ -68,8 +68,25 @@ export type ComposerCommandItem =
       description: string;
     };
 
+/**
+ * DOM id of a menu option, so the editor's aria-activedescendant can point at
+ * it. Item ids embed paths and may contain whitespace, which an IDREF cannot.
+ */
+export function composerCommandOptionDomId(listboxId: string, itemId: string): string {
+  return `${listboxId}-${itemId.replace(/\s/g, "_")}`;
+}
+
+const LISTBOX_LABEL_BY_TRIGGER: Record<ComposerTriggerKind, string> = {
+  path: "Files and folders",
+  "pull-request": "Pull requests",
+  "slash-command": "Commands",
+  skill: "Skills",
+};
+
 export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
   items: ComposerCommandItem[];
+  /** Id the editor references via aria-controls while the menu is open. */
+  listboxId: string;
   resolvedTheme: "light" | "dark";
   isLoading: boolean;
   triggerKind: ComposerTriggerKind | null;
@@ -104,12 +121,17 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
         data-composer-command-drawer="true"
       >
         {props.items.length > 0 ? (
-          <CommandList className="max-h-72 min-h-0 scroll-pb-6">
+          <CommandList
+            id={props.listboxId}
+            aria-label={props.triggerKind ? LISTBOX_LABEL_BY_TRIGGER[props.triggerKind] : undefined}
+            className="max-h-72 min-h-0 scroll-pb-6"
+          >
             <CommandGroup>
               {props.items.map((item) => (
                 <ComposerCommandMenuItem
                   key={item.id}
                   item={item}
+                  domId={composerCommandOptionDomId(props.listboxId, item.id)}
                   triggerKind={props.triggerKind}
                   resolvedTheme={props.resolvedTheme}
                   isActive={props.activeItemId === item.id}
@@ -121,7 +143,7 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
           </CommandList>
         ) : (
           <div className="px-5 pt-3.5 pb-7">
-            <p className="text-secondary-label text-xs">
+            <p role="status" className="text-secondary-label text-xs">
               {props.isLoading
                 ? props.triggerKind === "skill"
                   ? "Searching workspace skills..."
@@ -144,6 +166,7 @@ export const ComposerCommandMenu = memo(function ComposerCommandMenu(props: {
 
 const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
   item: ComposerCommandItem;
+  domId: string;
   triggerKind: ComposerTriggerKind | null;
   resolvedTheme: "light" | "dark";
   isActive: boolean;
@@ -159,7 +182,10 @@ const ComposerCommandMenuItem = memo(function ComposerCommandMenuItem(props: {
 
   return (
     <CommandItem
+      // Item owns `id` in its prop types; the render element carries ours.
+      render={<div id={props.domId} />}
       value={props.item.id}
+      aria-selected={props.isActive}
       data-composer-item-id={props.item.id}
       className={cn(
         "cursor-pointer select-none gap-3 rounded-lg px-3 py-2! hover:bg-transparent hover:text-inherit data-highlighted:bg-transparent data-highlighted:text-inherit",

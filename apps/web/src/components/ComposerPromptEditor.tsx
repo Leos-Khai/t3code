@@ -892,6 +892,13 @@ interface ComposerPromptEditorProps {
   onCitationSubmitAndSend?: () => void;
   onPaste: React.ClipboardEventHandler<HTMLElement>;
   editorRef: React.RefObject<ComposerPromptEditorHandle | null>;
+  /**
+   * Listbox of the open trigger menu and its highlighted option. Wiring them
+   * into aria-controls / aria-activedescendant lets screen readers follow the
+   * menu while focus never leaves the editor.
+   */
+  menuListboxId?: string | undefined;
+  menuActiveOptionId?: string | undefined;
 }
 
 /**
@@ -1638,6 +1645,8 @@ function ComposerPromptEditorInner({
   onCitationSubmitAndSend,
   onPaste,
   editorRef,
+  menuListboxId,
+  menuActiveOptionId,
 }: ComposerPromptEditorProps) {
   const [editor] = useLexicalComposerContext();
   const onChangeRef = useRef(onChange);
@@ -1985,6 +1994,9 @@ function ComposerPromptEditorInner({
                 )}
                 data-testid="composer-editor"
                 aria-placeholder={placeholder}
+                ariaAutoComplete="list"
+                ariaControls={menuListboxId}
+                ariaActiveDescendant={menuActiveOptionId}
                 placeholder={<span />}
                 onKeyDown={(event) => {
                   if (
@@ -2083,6 +2095,8 @@ export function ComposerPromptEditor({
   onCitationSubmitAndSend,
   onPaste,
   editorRef,
+  menuListboxId,
+  menuActiveOptionId,
 }: ComposerPromptEditorProps) {
   const initialValueRef = useRef(value);
   const initialSkillMetadataRef = useRef(skillMetadataByName(skills));
@@ -2124,6 +2138,8 @@ export function ComposerPromptEditor({
           onPaste={onPaste}
           {...(onCitationSubmitAndSend ? { onCitationSubmitAndSend } : {})}
           editorRef={editorRef}
+          menuListboxId={menuListboxId}
+          menuActiveOptionId={menuActiveOptionId}
           {...(onCommandKeyDown ? { onCommandKeyDown } : {})}
           {...(onPageScrollKeyDown ? { onPageScrollKeyDown } : {})}
           {...(onPageScrollKeyUp ? { onPageScrollKeyUp } : {})}
