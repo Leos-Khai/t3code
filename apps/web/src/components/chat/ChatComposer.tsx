@@ -2467,13 +2467,14 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
 
   const isComposerApprovalState = activePendingApproval !== null;
 
-  // The editor only references the listbox while it is actually rendered, so
-  // aria-controls and aria-activedescendant never point at missing nodes.
+  // The editor only references an option while the listbox is actually
+  // rendered, so aria-activedescendant never points at a missing node.
   const composerMenuListboxId = useId();
-  const composerMenuListboxRendered =
-    composerMenuOpen && !isComposerApprovalState && composerMenuItems.length > 0;
   const composerMenuActiveOptionDomId =
-    composerMenuListboxRendered && activeComposerMenuItem
+    composerMenuOpen &&
+    !isComposerApprovalState &&
+    composerMenuItems.length > 0 &&
+    activeComposerMenuItem
       ? composerCommandOptionDomId(composerMenuListboxId, activeComposerMenuItem.id)
       : undefined;
 
@@ -6655,7 +6656,7 @@ export const ChatComposer = memo(function ChatComposer(props: ChatComposerProps)
                     onChange={onPromptChange}
                     onVisibleSelectionChange={expandComposerForEditorChange}
                     onCommandKeyDown={onComposerCommandKey}
-                    menuListboxId={composerMenuListboxRendered ? composerMenuListboxId : undefined}
+                    menuListboxId={composerMenuListboxId}
                     menuActiveOptionId={composerMenuActiveOptionDomId}
                     onPageScrollKeyDown={onPageScrollKeyDown}
                     onPageScrollKeyUp={onPageScrollKeyUp}

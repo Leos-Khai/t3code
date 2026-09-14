@@ -2,7 +2,19 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ProviderDriverKind } from "@t3tools/contracts";
 import { describe, expect, it } from "vite-plus/test";
 
-import { ComposerCommandMenu } from "./ComposerCommandMenu";
+import { ComposerCommandMenu, composerCommandOptionDomId } from "./ComposerCommandMenu";
+
+describe("composerCommandOptionDomId", () => {
+  it("produces a whitespace-free id that stays distinct across near-identical paths", () => {
+    const spaced = composerCommandOptionDomId("menu", "path:file:docs/my file.md");
+    const underscored = composerCommandOptionDomId("menu", "path:file:docs/my_file.md");
+    const escaped = composerCommandOptionDomId("menu", "path:file:docs/my%0020file.md");
+
+    expect(spaced).not.toMatch(/\s/);
+    expect(new Set([spaced, underscored, escaped]).size).toBe(3);
+    expect(composerCommandOptionDomId("menu", "slash:model")).toBe("menu-slash:model");
+  });
+});
 
 describe("ComposerCommandMenu", () => {
   it("renders slash commands with their descriptions", () => {

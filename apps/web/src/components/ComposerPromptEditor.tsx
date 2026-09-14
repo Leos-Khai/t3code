@@ -893,9 +893,11 @@ interface ComposerPromptEditorProps {
   onPaste: React.ClipboardEventHandler<HTMLElement>;
   editorRef: React.RefObject<ComposerPromptEditorHandle | null>;
   /**
-   * Listbox of the open trigger menu and its highlighted option. Wiring them
-   * into aria-controls / aria-activedescendant lets screen readers follow the
-   * menu while focus never leaves the editor.
+   * Trigger-menu wiring for screen readers. `menuListboxId` is the listbox the
+   * menus render into and, when present, advertises list autocomplete.
+   * `menuActiveOptionId` is the highlighted option while that listbox is
+   * rendered; it drives aria-activedescendant so the reader follows the menu
+   * without focus ever leaving the editor.
    */
   menuListboxId?: string | undefined;
   menuActiveOptionId?: string | undefined;
@@ -1994,8 +1996,8 @@ function ComposerPromptEditorInner({
                 )}
                 data-testid="composer-editor"
                 aria-placeholder={placeholder}
-                ariaAutoComplete="list"
-                ariaControls={menuListboxId}
+                ariaAutoComplete={menuListboxId ? "list" : undefined}
+                ariaControls={menuActiveOptionId ? menuListboxId : undefined}
                 ariaActiveDescendant={menuActiveOptionId}
                 placeholder={<span />}
                 onKeyDown={(event) => {

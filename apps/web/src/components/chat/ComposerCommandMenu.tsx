@@ -70,10 +70,15 @@ export type ComposerCommandItem =
 
 /**
  * DOM id of a menu option, so the editor's aria-activedescendant can point at
- * it. Item ids embed paths and may contain whitespace, which an IDREF cannot.
+ * it. Item ids embed paths and may contain whitespace, which an IDREF cannot;
+ * the fixed-width escape keeps ids that differ only there distinct.
  */
 export function composerCommandOptionDomId(listboxId: string, itemId: string): string {
-  return `${listboxId}-${itemId.replace(/\s/g, "_")}`;
+  const escaped = itemId.replace(
+    /[\s%]/g,
+    (char) => `%${char.charCodeAt(0).toString(16).padStart(4, "0")}`,
+  );
+  return `${listboxId}-${escaped}`;
 }
 
 const LISTBOX_LABEL_BY_TRIGGER: Record<ComposerTriggerKind, string> = {
