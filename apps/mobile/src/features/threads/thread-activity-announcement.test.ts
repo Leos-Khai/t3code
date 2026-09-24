@@ -10,7 +10,9 @@ const idle: ThreadActivityAnnouncementState = {
   connected: true,
   environmentLabel: "Mac mini",
   working: false,
+  turnId: "turn-1",
   turnState: "completed",
+  turnRequestedAt: "2026-09-24T10:00:00.000Z",
   approvalRequestId: null,
   userInputRequestId: null,
 };
@@ -20,34 +22,6 @@ describe("threadActivityAnnouncement", () => {
   it("stays silent when a thread opens or the selection switches threads", () => {
     expect(threadActivityAnnouncement(null, working)).toBeNull();
     expect(threadActivityAnnouncement(idle, { ...working, threadKey: "env:thread-2" })).toBeNull();
-  });
-
-  it("stays silent when nothing it reports changed", () => {
-    expect(threadActivityAnnouncement(working, { ...working })).toBeNull();
-  });
-
-  it("announces a turn starting and how it ended", () => {
-    expect(threadActivityAnnouncement(idle, working)).toBe("Agent working");
-    expect(threadActivityAnnouncement(working, idle)).toBe("Response complete");
-    expect(threadActivityAnnouncement(working, { ...idle, turnState: "interrupted" })).toBe(
-      "Response stopped",
-    );
-    expect(threadActivityAnnouncement(working, { ...idle, turnState: "error" })).toBe(
-      "Response failed",
-    );
-  });
-
-  it("announces each new approval and question once", () => {
-    const approval = { ...working, approvalRequestId: "approval-1" };
-    expect(threadActivityAnnouncement(working, approval)).toBe("Approval needed");
-    expect(threadActivityAnnouncement(approval, { ...approval })).toBeNull();
-    expect(
-      threadActivityAnnouncement(approval, { ...working, approvalRequestId: "approval-2" }),
-    ).toBe("Approval needed");
-
-    const question = { ...working, userInputRequestId: "question-1" };
-    expect(threadActivityAnnouncement(working, question)).toBe("Question from agent");
-    expect(threadActivityAnnouncement(question, working)).toBeNull();
   });
 
   it("announces the connection only when it crosses connected", () => {

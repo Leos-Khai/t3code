@@ -1,5 +1,6 @@
 import type { WorktreeSetupCardProps } from "./worktree-setup-card";
 import type { ComposerTextPaste } from "../../native/T3ComposerEditor.types";
+import { activityAnnouncementTurnFields } from "@t3tools/client-runtime/activity-announcement";
 import { type EnvironmentConnectionPhase } from "@t3tools/client-runtime/connection";
 import {
   appendCodexArtifactTemplateUsePrompt,
@@ -272,7 +273,9 @@ function useThreadActivityAnnouncements({
   connected,
   environmentLabel,
   working,
+  turnId,
   turnState,
+  turnRequestedAt,
   approvalRequestId,
   userInputRequestId,
 }: ThreadActivityAnnouncementState) {
@@ -288,7 +291,9 @@ function useThreadActivityAnnouncements({
       connected,
       environmentLabel,
       working,
+      turnId,
       turnState,
+      turnRequestedAt,
       approvalRequestId,
       userInputRequestId,
     };
@@ -305,6 +310,8 @@ function useThreadActivityAnnouncements({
     environmentLabel,
     isFocused,
     threadKey,
+    turnId,
+    turnRequestedAt,
     turnState,
     userInputRequestId,
     working,
@@ -740,7 +747,7 @@ export const ThreadDetailScreen = memo(function ThreadDetailScreen(props: Thread
     connected: props.connectionStateLabel === "connected",
     environmentLabel: props.environmentLabel,
     working: props.activeWorkStartedAt !== null,
-    turnState: props.selectedThread.latestTurn?.state ?? null,
+    ...activityAnnouncementTurnFields(props.selectedThread.latestTurn),
     approvalRequestId: props.activePendingApproval?.requestId ?? null,
     userInputRequestId: props.activePendingUserInput?.requestId ?? null,
   });

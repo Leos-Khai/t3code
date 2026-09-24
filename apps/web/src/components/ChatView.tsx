@@ -9,6 +9,7 @@ import {
 import { ChatActivityAnnouncer } from "./chat/ChatActivityAnnouncer";
 import { feedbackBannerItem } from "./chat/ComposerFeedback";
 import { usageLimitsBannerItem } from "./chat/ComposerUsageLimits";
+import { activityAnnouncementTurnFields } from "@t3tools/client-runtime/activity-announcement";
 import { derivePendingRequests } from "@t3tools/client-runtime/pending-requests";
 import {
   questionAttachmentDraftId,
@@ -9877,9 +9878,8 @@ export default function ChatView(props: ChatViewProps) {
             ) : null}
             <ChatActivityAnnouncer
               threadKey={routeThreadKey}
-              isWorking={isWorking}
-              turnId={activeLatestTurn?.turnId ?? null}
-              turnState={activeLatestTurn?.state ?? null}
+              working={isWorking}
+              {...activityAnnouncementTurnFields(activeLatestTurn)}
               approvalRequestId={activePendingApproval?.requestId ?? null}
               userInputRequestId={activePendingUserInput?.requestId ?? null}
             />

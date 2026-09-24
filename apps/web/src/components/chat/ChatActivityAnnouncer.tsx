@@ -1,32 +1,56 @@
-import { useEffect, useRef, useState } from "react";
-
 import {
-  deriveChatActivityAnnouncement,
-  type ChatActivitySnapshot,
-} from "./ChatActivityAnnouncer.logic";
+  activityAnnouncementMessages,
+  type ActivityAnnouncementState,
+} from "@t3tools/client-runtime/activity-announcement";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Hidden status region that tells screen reader users when the agent starts,
  * finishes, or needs them. Kept as its own component so an announcement
  * re-renders only this node, not ChatView.
  */
-export function ChatActivityAnnouncer(props: ChatActivitySnapshot) {
-  const { threadKey, isWorking, turnId, turnState, approvalRequestId, userInputRequestId } = props;
-  const previousRef = useRef<ChatActivitySnapshot | null>(null);
+export function ChatActivityAnnouncer(props: ActivityAnnouncementState) {
+  const {
+    threadKey,
+    working,
+    turnId,
+    turnState,
+    turnRequestedAt,
+    approvalRequestId,
+    userInputRequestId,
+  } = props;
+  const previousRef = useRef<ActivityAnnouncementState | null>(null);
   const [announcement, setAnnouncement] = useState<{ message: string; id: number } | null>(null);
 
   useEffect(() => {
-    const next = { threadKey, isWorking, turnId, turnState, approvalRequestId, userInputRequestId };
+    const next = {
+      threadKey,
+      working,
+      turnId,
+      turnState,
+      turnRequestedAt,
+      approvalRequestId,
+      userInputRequestId,
+    };
     const previous = previousRef.current;
     previousRef.current = next;
-    const message = deriveChatActivityAnnouncement(previous, next);
-    if (message !== null) {
+    const messages = activityAnnouncementMessages(previous, next);
+    if (messages.length > 0) {
+      const message = messages.join(". ");
       setAnnouncement((current) => ({ message, id: (current?.id ?? 0) + 1 }));
     } else if (previous !== null && previous.threadKey !== threadKey) {
       // Drop the last thread's message so it can't be read out on this one.
       setAnnouncement(null);
     }
-  }, [threadKey, isWorking, turnId, turnState, approvalRequestId, userInputRequestId]);
+  }, [
+    threadKey,
+    working,
+    turnId,
+    turnState,
+    turnRequestedAt,
+    approvalRequestId,
+    userInputRequestId,
+  ]);
 
   return (
     <div role="status" aria-atomic="true" className="sr-only">
