@@ -46,8 +46,15 @@ describe("activityAnnouncementMessages", () => {
   });
 
   it("announces a turn that finished before its running state was seen", () => {
-    const sending = { ...idle, working: true };
-    expect(activityAnnouncementMessages(sending, { ...running, turnState: "completed" })).toEqual([
+    const finished = { ...running, working: false, turnState: "completed" as const };
+    expect(activityAnnouncementMessages({ ...idle, working: true }, finished)).toEqual([
+      "Response complete",
+    ]);
+    // Started from another device while this client was idle.
+    expect(activityAnnouncementMessages(idle, finished)).toEqual(["Response complete"]);
+    // The thread's first turn, sent from this client.
+    const empty = { ...idle, turnId: null, turnState: null, turnRequestedAt: null };
+    expect(activityAnnouncementMessages({ ...empty, working: true }, finished)).toEqual([
       "Response complete",
     ]);
   });

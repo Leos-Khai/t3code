@@ -30,14 +30,16 @@ function endedTurnState(previous: ActivityAnnouncementState, next: ActivityAnnou
   if (next.turnId === previous.turnId) {
     return previous.turnState === "running" ? next.turnState : null;
   }
-  // A short turn can start and finish between two renders, so its running
-  // state is never seen. Count it only while work was already under way and
-  // the turn is newer than the last one, so loading history or reverting to
-  // an older turn stays silent.
+  // A short turn, or one started from another device, can start and finish
+  // between two renders, so its running state is never seen. Count it when it
+  // is newer than the last turn seen, so reverting to an older turn stays
+  // silent. With no earlier turn to compare, only count it if work was under
+  // way, so loading the thread's history stays silent.
   const newer =
-    previous.turnRequestedAt === null ||
-    (next.turnRequestedAt !== null && next.turnRequestedAt > previous.turnRequestedAt);
-  return previous.working && newer ? next.turnState : null;
+    previous.turnRequestedAt === null
+      ? previous.working
+      : next.turnRequestedAt !== null && next.turnRequestedAt > previous.turnRequestedAt;
+  return newer ? next.turnState : null;
 }
 
 /**

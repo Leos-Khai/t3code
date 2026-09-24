@@ -20,7 +20,10 @@ export function ChatActivityAnnouncer(props: ActivityAnnouncementState) {
     userInputRequestId,
   } = props;
   const previousRef = useRef<ActivityAnnouncementState | null>(null);
-  const [announcement, setAnnouncement] = useState<{ message: string; id: number } | null>(null);
+  const restoreTimerRef = useRef<number | undefined>(undefined);
+  const [announcement, setAnnouncement] = useState<string | null>(null);
+
+  useEffect(() => () => window.clearTimeout(restoreTimerRef.current), []);
 
   useEffect(() => {
     const next = {
@@ -37,9 +40,14 @@ export function ChatActivityAnnouncer(props: ActivityAnnouncementState) {
     const messages = activityAnnouncementMessages(previous, next);
     if (messages.length > 0) {
       const message = messages.join(". ");
-      setAnnouncement((current) => ({ message, id: (current?.id ?? 0) + 1 }));
+      // Empty the region first and fill it a moment later. Screen readers can
+      // ignore a swap to identical text, such as two approvals in a row.
+      window.clearTimeout(restoreTimerRef.current);
+      setAnnouncement(null);
+      restoreTimerRef.current = window.setTimeout(() => setAnnouncement(message), 100);
     } else if (previous !== null && previous.threadKey !== threadKey) {
       // Drop the last thread's message so it can't be read out on this one.
+      window.clearTimeout(restoreTimerRef.current);
       setAnnouncement(null);
     }
   }, [
@@ -54,9 +62,7 @@ export function ChatActivityAnnouncer(props: ActivityAnnouncementState) {
 
   return (
     <div role="status" aria-atomic="true" className="sr-only">
-      {/* A fresh node per announcement makes screen readers repeat identical
-          text, such as two approvals in a row. */}
-      {announcement ? <span key={announcement.id}>{announcement.message}</span> : null}
+      {announcement}
     </div>
   );
 }
