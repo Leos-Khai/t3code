@@ -6,6 +6,7 @@ import {
   hasProviderUsageLimits,
   isUsageLimitsCommand,
 } from "@t3tools/shared/usageLimits";
+import { ChatActivityAnnouncer } from "./chat/ChatActivityAnnouncer";
 import { feedbackBannerItem } from "./chat/ComposerFeedback";
 import { usageLimitsBannerItem } from "./chat/ComposerUsageLimits";
 import { derivePendingRequests } from "@t3tools/client-runtime/pending-requests";
@@ -9874,6 +9875,14 @@ export default function ChatView(props: ChatViewProps) {
                 </div>
               </div>
             ) : null}
+            <ChatActivityAnnouncer
+              threadKey={routeThreadKey}
+              isWorking={isWorking}
+              turnId={activeLatestTurn?.turnId ?? null}
+              turnState={activeLatestTurn?.state ?? null}
+              approvalRequestId={activePendingApproval?.requestId ?? null}
+              userInputRequestId={activePendingUserInput?.requestId ?? null}
+            />
             {/* Banners overlay the timeline without changing its content height. */}
             <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col">
               <ProviderStatusBanner
