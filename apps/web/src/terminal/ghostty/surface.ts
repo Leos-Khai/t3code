@@ -796,6 +796,7 @@ export class GhosttyTerminalSurface {
     const concealed = announce && this.core.isConcealing();
     this.core.write(data);
     if (announce) this.announcer.output(data, concealed);
+    else this.announcer.skip(data);
     this.synchronizeMouseTrackingState();
     // Restart the blink cycle from the visible phase so the cursor never sits
     // invisible through a stream of output or a burst of typing echo.
@@ -808,6 +809,7 @@ export class GhosttyTerminalSurface {
     if (this.disposed) return;
     this.lastMouseMotionData = "";
     this.core.resetAndWrite(data);
+    this.announcer.replay(data);
     this.synchronizeMouseTrackingState();
     // A replayed session starts from the visible phase like any other write:
     // reattaching mid-blink must not open on an invisible cursor.

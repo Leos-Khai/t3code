@@ -108,7 +108,10 @@ export class TerminalAnnouncer {
    * capped, or replayed output can never leave this out of step with the canvas.
    */
   output(data: string, concealed: boolean): void {
-    if (this.lines > MAX_ANNOUNCED_LINES) return;
+    if (this.lines > MAX_ANNOUNCED_LINES) {
+      this.skip(data);
+      return;
+    }
     const { text, pending } = stripTerminalControls(this.pending + data, concealed);
     this.pending = pending;
     for (const char of text) {
@@ -121,7 +124,6 @@ export class TerminalAnnouncer {
       this.buffer += char;
       if (char === "\n" && ++this.lines > MAX_ANNOUNCED_LINES) {
         this.buffer += TOO_MUCH_OUTPUT;
-        this.pending = "";
         break;
       }
     }
@@ -133,11 +135,28 @@ export class TerminalAnnouncer {
     }
   }
 
+  /**
+   * Output the core parses without announcing. Only an unfinished trailing sequence is
+   * kept, because the core holds it too and the next announced chunk completes it.
+   */
+  skip(data: string): void {
+    const joined = this.pending + data;
+    const start = joined.lastIndexOf("\x1b");
+    this.pending = start < 0 ? "" : stripTerminalControls(joined.slice(start)).pending;
+  }
+
+  /** The core was reset and replayed `data` without announcing it. */
+  replay(data: string): void {
+    this.reset();
+    this.pending = "";
+    this.skip(data);
+  }
+
+  /** Stops announcing; the unfinished-sequence carry stays in step with the core. */
   reset(): void {
     if (this.timer !== null) window.clearTimeout(this.timer);
     this.timer = null;
     this.element.textContent = "";
-    this.pending = "";
     this.buffer = "";
     this.echo = [];
     this.lines = 0;

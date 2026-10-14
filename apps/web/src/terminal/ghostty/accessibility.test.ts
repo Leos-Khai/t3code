@@ -102,6 +102,18 @@ describe("TerminalAnnouncer", () => {
     expect(announcer.element.textContent).toBe("shown");
   });
 
+  it("completes a conceal sequence split across output it did not announce", () => {
+    const announcer = createAnnouncer();
+    // The core holds the unfinished sequence, so its style is not concealed yet.
+    announcer.skip("unfocused\x1b[");
+    announcer.reset();
+    announcer.output("8msecret", false);
+    announcer.replay("history\x1b[1;");
+    announcer.output("8mhidden", false);
+    vi.runAllTimers();
+    expect(announcer.element.textContent).toBe("");
+  });
+
   it("stops reading long output until the next keystroke", () => {
     const announcer = createAnnouncer();
     announcer.output("line\n".repeat(30), false);
