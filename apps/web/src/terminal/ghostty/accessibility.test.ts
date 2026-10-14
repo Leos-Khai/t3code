@@ -79,6 +79,22 @@ describe("TerminalAnnouncer", () => {
     expect(announcer.element.textContent).toBe("$ ");
   });
 
+  it("clears the region between batches and on reset", () => {
+    const announcer = createAnnouncer();
+    announcer.output("compiled\n", false);
+    vi.runAllTimers();
+    expect(announcer.element.textContent).toBe("compiled\n");
+
+    // An identical batch must pass through an empty region to be announced again.
+    announcer.output("compiled\n", false);
+    expect(announcer.element.textContent).toBe("");
+    vi.runAllTimers();
+    expect(announcer.element.textContent).toBe("compiled\n");
+
+    announcer.reset();
+    expect(announcer.element.textContent).toBe("");
+  });
+
   it("starts each chunk from the terminal's conceal state", () => {
     const announcer = createAnnouncer();
     announcer.output("secret\x1b[28mshown", true);

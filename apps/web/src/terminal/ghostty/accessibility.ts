@@ -126,6 +126,9 @@ export class TerminalAnnouncer {
       }
     }
     if (this.buffer.length > 0 && this.timer === null) {
+      // Empty the region for the whole batch delay so a batch identical to the
+      // last one still registers as a change and is announced again.
+      this.element.textContent = "";
       this.timer = window.setTimeout(this.flush, ANNOUNCE_DELAY_MS);
     }
   }
@@ -133,6 +136,7 @@ export class TerminalAnnouncer {
   reset(): void {
     if (this.timer !== null) window.clearTimeout(this.timer);
     this.timer = null;
+    this.element.textContent = "";
     this.pending = "";
     this.buffer = "";
     this.echo = [];
