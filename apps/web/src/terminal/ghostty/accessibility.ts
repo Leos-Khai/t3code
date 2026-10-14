@@ -1,3 +1,5 @@
+import type { GhosttyRow } from "./core";
+
 // Escape sequences (CSI, OSC/DCS/SOS/PM/APC strings, plain ESC) and C0/C1
 // controls other than tab, line feed and carriage return. Each terminator is
 // captured so a sequence cut off at the end of a chunk can be told apart.
@@ -9,29 +11,58 @@ const MAX_ANNOUNCED_LINES = 20;
 const ANNOUNCE_DELAY_MS = 100;
 const TOO_MUCH_OUTPUT = "\nToo much output to announce, read the terminal rows instead.";
 
-/** Printable text of PTY output, plus an unfinished trailing sequence to prepend to the next chunk. */
-export function stripTerminalControls(data: string): { text: string; pending: string } {
+/** An SGR sequence after its leading ESC; private-marker CSI ... m sequences are not SGR. */
+const SGR_BODY = /^\[([0-9;:]*)m$/;
+
+/** Whether text is concealed (SGR 8) after an SGR parameter list, skipping extended color arguments. */
+function sgrConcealed(params: string, concealed: boolean): boolean {
+  const values = params.split(";");
+  for (let index = 0; index < values.length; index += 1) {
+    const value = values[index] ?? "";
+    const code = Number(value.split(":")[0] || 0);
+    if (code === 0 || code === 28) concealed = false;
+    else if (code === 8) concealed = true;
+    else if ((code === 38 || code === 48 || code === 58) && !value.includes(":")) {
+      const mode = values[index + 1];
+      index += mode === "5" ? 2 : mode === "2" ? 4 : 0;
+    }
+  }
+  return concealed;
+}
+
+/**
+ * Printable text of PTY output, dropping concealed text the canvas hides. Returns an
+ * unfinished trailing sequence to prepend to the next chunk, and the conceal state to carry.
+ */
+export function stripTerminalControls(
+  data: string,
+  concealed = false,
+): { text: string; pending: string; concealed: boolean } {
+  let text = "";
   let pending = "";
-  const text = data.replace(
-    CONTROL_SEQUENCE,
-    (
-      match: string,
-      csiEnd: string | undefined,
-      stringEnd: string | undefined,
-      escEnd: string | undefined,
-      offset: number,
-    ) => {
-      if (
-        match.startsWith("\x1b") &&
-        offset + match.length === data.length &&
-        !(csiEnd || stringEnd || escEnd)
-      ) {
-        pending = match;
-      }
-      return "";
-    },
-  );
-  return { text, pending };
+  let end = 0;
+  for (const match of data.matchAll(CONTROL_SEQUENCE)) {
+    const [sequence, csiEnd, stringEnd, escEnd] = match;
+    if (!concealed) text += data.slice(end, match.index);
+    end = match.index + sequence.length;
+    if (sequence.startsWith("\x1b") && end === data.length && !(csiEnd || stringEnd || escEnd)) {
+      pending = sequence;
+    } else {
+      const sgr = sequence.startsWith("\x1b") ? SGR_BODY.exec(sequence.slice(1)) : null;
+      if (sgr) concealed = sgrConcealed(sgr[1] ?? "", concealed);
+    }
+  }
+  if (!concealed) text += data.slice(end);
+  return { text, pending, concealed };
+}
+
+/** A row's text as the canvas shows it, with concealed cells blanked. */
+export function accessibleRowText(row: GhosttyRow): string {
+  if (!row.cells.some((cell) => cell.invisible)) return row.text;
+  return row.cells
+    .map((cell) => (cell.invisible ? " " : cell.text || " "))
+    .join("")
+    .trimEnd();
 }
 
 /** Collapses carriage-return rewrites (progress bars, spinners) to the last visible text per line. */
@@ -52,6 +83,7 @@ export function collapseTerminalOverwrites(text: string): string {
 export class TerminalAnnouncer {
   readonly element: HTMLDivElement;
   private pending = "";
+  private concealed = false;
   private buffer = "";
   private echo: string[] = [];
   private lines = 0;
@@ -65,6 +97,8 @@ export class TerminalAnnouncer {
 
   typed(data: string): void {
     this.element.textContent = "";
+    // Output skipped past the line cap was never parsed, so its conceal state is unknown.
+    if (this.lines > MAX_ANNOUNCED_LINES) this.concealed = false;
     this.lines = 0;
     // Control keys (Enter, arrows) produce output the screen reader has not spoken.
     if ([...data].length === 1 && data >= " " && data !== "\x7f") this.echo.push(data);
@@ -73,10 +107,16 @@ export class TerminalAnnouncer {
 
   output(data: string): void {
     if (this.lines > MAX_ANNOUNCED_LINES) return;
-    const { text, pending } = stripTerminalControls(this.pending + data);
+    const { text, pending, concealed } = stripTerminalControls(this.pending + data, this.concealed);
     this.pending = pending;
+    this.concealed = concealed;
     for (const char of text) {
-      if (this.echo.shift() === char) continue;
+      // Only a match consumes a typed character: a line redraw (\r, prompt)
+      // can precede the echo itself.
+      if (this.echo[0] === char) {
+        this.echo.shift();
+        continue;
+      }
       this.buffer += char;
       if (char === "\n" && ++this.lines > MAX_ANNOUNCED_LINES) {
         this.buffer += TOO_MUCH_OUTPUT;
@@ -93,6 +133,7 @@ export class TerminalAnnouncer {
     if (this.timer !== null) window.clearTimeout(this.timer);
     this.timer = null;
     this.pending = "";
+    this.concealed = false;
     this.buffer = "";
     this.echo = [];
     this.lines = 0;

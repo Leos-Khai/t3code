@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import {
+  accessibleRowText,
   collapseTerminalOverwrites,
   stripTerminalControls,
   TerminalAnnouncer,
@@ -11,16 +12,35 @@ describe("stripTerminalControls", () => {
     expect(stripTerminalControls("\x1b[1;32mok\x1b[0m\x1b]0;title\x07\x07\r\n\x1b(B$ ")).toEqual({
       text: "ok\r\n$ ",
       pending: "",
+      concealed: false,
     });
   });
 
+  it("drops concealed text across chunks, but not 256-color index 8", () => {
+    expect(stripTerminalControls("a\x1b[1;8msecret")).toEqual({
+      text: "a",
+      pending: "",
+      concealed: true,
+    });
+    expect(stripTerminalControls("more\x1b[28mb", true).text).toBe("b");
+    expect(stripTerminalControls("\x1b[38;5;8mgrey\x1b[38:5:8mtoo").text).toBe("greytoo");
+  });
+
   it("carries a sequence cut off at the end of a chunk", () => {
-    expect(stripTerminalControls("a\x1b[3")).toEqual({ text: "a", pending: "\x1b[3" });
-    expect(stripTerminalControls("a\x1b]0;title\x1b")).toEqual({
+    expect(stripTerminalControls("a\x1b[3")).toMatchObject({ text: "a", pending: "\x1b[3" });
+    expect(stripTerminalControls("a\x1b]0;title\x1b")).toMatchObject({
       text: "a",
       pending: "\x1b]0;title\x1b",
     });
-    expect(stripTerminalControls("\x1b]0;title\x1b\\b")).toEqual({ text: "b", pending: "" });
+    expect(stripTerminalControls("\x1b]0;title\x1b\\b")).toMatchObject({ text: "b", pending: "" });
+  });
+});
+
+describe("accessibleRowText", () => {
+  it("blanks concealed cells the canvas does not draw", () => {
+    const cells = [..."ab"].map((text, index) => ({ text, invisible: index === 0 }));
+    const row = { cells, text: "ab" } as unknown as Parameters<typeof accessibleRowText>[0];
+    expect(accessibleRowText(row)).toBe(" b");
   });
 });
 
@@ -54,6 +74,14 @@ describe("TerminalAnnouncer", () => {
     announcer.output("\r\nREADME.md\r\n");
     vi.runAllTimers();
     expect(announcer.element.textContent).toBe("\nREADME.md\n");
+  });
+
+  it("still skips the echo when the shell redraws the line first", () => {
+    const announcer = createAnnouncer();
+    announcer.typed("a");
+    announcer.output("\r$ a");
+    vi.runAllTimers();
+    expect(announcer.element.textContent).toBe("$ ");
   });
 
   it("stops reading long output until the next keystroke", () => {

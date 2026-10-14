@@ -17,7 +17,7 @@ import {
 import symbolsFontUrl from "./fonts/SymbolsNerdFontMono-Regular.woff2?url";
 import { isMonospaceFamily } from "../../appearanceFonts";
 import { observeResize } from "../../lib/observeResize";
-import { TerminalAnnouncer } from "./accessibility";
+import { accessibleRowText, TerminalAnnouncer } from "./accessibility";
 
 export const DEFAULT_TERMINAL_FONT_SIZE = 12;
 const MIN_TERMINAL_FONT_SIZE = 6;
@@ -2068,8 +2068,9 @@ export class GhosttyTerminalSurface {
       this.accessibleRows.append(element);
     }
     elements.forEach((element, y) => {
+      const row = snapshot.rowData[y];
       if (y >= known || snapshot.dirtyRows.has(y)) {
-        element.textContent = snapshot.rowData[y]?.text ?? "";
+        element.textContent = row ? accessibleRowText(row) : "";
       }
     });
   }
