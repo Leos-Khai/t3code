@@ -12,16 +12,11 @@ describe("stripTerminalControls", () => {
     expect(stripTerminalControls("\x1b[1;32mok\x1b[0m\x1b]0;title\x07\x07\r\n\x1b(B$ ")).toEqual({
       text: "ok\r\n$ ",
       pending: "",
-      concealed: false,
     });
   });
 
-  it("drops concealed text across chunks, but not 256-color index 8", () => {
-    expect(stripTerminalControls("a\x1b[1;8msecret")).toEqual({
-      text: "a",
-      pending: "",
-      concealed: true,
-    });
+  it("drops concealed text from the given starting state, but not 256-color index 8", () => {
+    expect(stripTerminalControls("a\x1b[1;8msecret\x1b[0mb").text).toBe("ab");
     expect(stripTerminalControls("more\x1b[28mb", true).text).toBe("b");
     expect(stripTerminalControls("\x1b[38;5;8mgrey\x1b[38:5:8mtoo").text).toBe("greytoo");
   });
@@ -69,9 +64,9 @@ describe("TerminalAnnouncer", () => {
     const announcer = createAnnouncer();
     announcer.typed("l");
     announcer.typed("s");
-    announcer.output("ls");
+    announcer.output("ls", false);
     announcer.typed("\r");
-    announcer.output("\r\nREADME.md\r\n");
+    announcer.output("\r\nREADME.md\r\n", false);
     vi.runAllTimers();
     expect(announcer.element.textContent).toBe("\nREADME.md\n");
   });
@@ -79,24 +74,31 @@ describe("TerminalAnnouncer", () => {
   it("still skips the echo when the shell redraws the line first", () => {
     const announcer = createAnnouncer();
     announcer.typed("a");
-    announcer.output("\r$ a");
+    announcer.output("\r$ a", false);
     vi.runAllTimers();
     expect(announcer.element.textContent).toBe("$ ");
   });
 
+  it("starts each chunk from the terminal's conceal state", () => {
+    const announcer = createAnnouncer();
+    announcer.output("secret\x1b[28mshown", true);
+    vi.runAllTimers();
+    expect(announcer.element.textContent).toBe("shown");
+  });
+
   it("stops reading long output until the next keystroke", () => {
     const announcer = createAnnouncer();
-    announcer.output("line\n".repeat(30));
+    announcer.output("line\n".repeat(30), false);
     vi.runAllTimers();
     expect(announcer.element.textContent.match(/line/g)).toHaveLength(21);
     expect(announcer.element.textContent).toContain("Too much output");
 
-    announcer.output("more\n");
+    announcer.output("more\n", false);
     vi.runAllTimers();
     expect(announcer.element.textContent).toContain("Too much output");
 
     announcer.typed("\r");
-    announcer.output("next\n");
+    announcer.output("next\n", false);
     vi.runAllTimers();
     expect(announcer.element.textContent).toBe("next\n");
   });

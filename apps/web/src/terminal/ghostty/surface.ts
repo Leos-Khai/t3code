@@ -791,8 +791,11 @@ export class GhosttyTerminalSurface {
 
   write(data: string): void {
     if (this.disposed) return;
+    const announce = this.focused && this.visible;
+    // Read before the write: the announcer replays this chunk from the core's prior state.
+    const concealed = announce && this.core.isConcealing();
     this.core.write(data);
-    if (this.focused && this.visible) this.announcer.output(data);
+    if (announce) this.announcer.output(data, concealed);
     this.synchronizeMouseTrackingState();
     // Restart the blink cycle from the visible phase so the cursor never sits
     // invisible through a stream of output or a burst of typing echo.

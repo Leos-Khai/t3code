@@ -31,13 +31,14 @@ function sgrConcealed(params: string, concealed: boolean): boolean {
 }
 
 /**
- * Printable text of PTY output, dropping concealed text the canvas hides. Returns an
- * unfinished trailing sequence to prepend to the next chunk, and the conceal state to carry.
+ * Printable text of PTY output, dropping concealed text the canvas hides. `concealed` is the
+ * terminal's state before `data`; an unfinished trailing sequence is returned to prepend to the
+ * next chunk.
  */
 export function stripTerminalControls(
   data: string,
   concealed = false,
-): { text: string; pending: string; concealed: boolean } {
+): { text: string; pending: string } {
   let text = "";
   let pending = "";
   let end = 0;
@@ -53,7 +54,7 @@ export function stripTerminalControls(
     }
   }
   if (!concealed) text += data.slice(end);
-  return { text, pending, concealed };
+  return { text, pending };
 }
 
 /** A row's text as the canvas shows it, with concealed cells blanked. */
@@ -83,7 +84,6 @@ export function collapseTerminalOverwrites(text: string): string {
 export class TerminalAnnouncer {
   readonly element: HTMLDivElement;
   private pending = "";
-  private concealed = false;
   private buffer = "";
   private echo: string[] = [];
   private lines = 0;
@@ -97,19 +97,20 @@ export class TerminalAnnouncer {
 
   typed(data: string): void {
     this.element.textContent = "";
-    // Output skipped past the line cap was never parsed, so its conceal state is unknown.
-    if (this.lines > MAX_ANNOUNCED_LINES) this.concealed = false;
     this.lines = 0;
     // Control keys (Enter, arrows) produce output the screen reader has not spoken.
     if ([...data].length === 1 && data >= " " && data !== "\x7f") this.echo.push(data);
     else this.echo = [];
   }
 
-  output(data: string): void {
+  /**
+   * `concealed` comes from the terminal core before it parses `data`, so muted,
+   * capped, or replayed output can never leave this out of step with the canvas.
+   */
+  output(data: string, concealed: boolean): void {
     if (this.lines > MAX_ANNOUNCED_LINES) return;
-    const { text, pending, concealed } = stripTerminalControls(this.pending + data, this.concealed);
+    const { text, pending } = stripTerminalControls(this.pending + data, concealed);
     this.pending = pending;
-    this.concealed = concealed;
     for (const char of text) {
       // Only a match consumes a typed character: a line redraw (\r, prompt)
       // can precede the echo itself.
@@ -133,7 +134,6 @@ export class TerminalAnnouncer {
     if (this.timer !== null) window.clearTimeout(this.timer);
     this.timer = null;
     this.pending = "";
-    this.concealed = false;
     this.buffer = "";
     this.echo = [];
     this.lines = 0;
