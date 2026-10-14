@@ -114,6 +114,15 @@ describe("TerminalAnnouncer", () => {
     expect(announcer.element.textContent).toBe("");
   });
 
+  it("keeps an open string sequence across skipped output with a stray ESC", () => {
+    const announcer = createAnnouncer();
+    announcer.skip("\x1b]0;ti");
+    announcer.skip("tle\x1b");
+    announcer.output("xVISIBLE\x1b\\", false);
+    vi.runAllTimers();
+    expect(announcer.element.textContent).toBe("");
+  });
+
   it("stops reading long output until the next keystroke", () => {
     const announcer = createAnnouncer();
     announcer.output("line\n".repeat(30), false);

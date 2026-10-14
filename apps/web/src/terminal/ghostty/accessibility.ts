@@ -6,6 +6,8 @@ import type { GhosttyRow } from "./core";
 const CONTROL_SEQUENCE =
   // eslint-disable-next-line no-control-regex -- Matching control characters is the point.
   /\x1b(?:\[[0-?]*[ -/]*([@-~])?|[\]PX^_][\s\S]*?(\x07|\x1b\\|$)|[ -/]*([0-~])?)|[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/g;
+/** OSC, DCS, SOS, PM, and APC introducers; their strings run until BEL or ST. */
+const STRING_OPENERS = ["\x1b]", "\x1bP", "\x1bX", "\x1b^", "\x1b_"];
 /** Output beyond this many lines between keystrokes is left for review instead of read aloud. */
 const MAX_ANNOUNCED_LINES = 20;
 const ANNOUNCE_DELAY_MS = 100;
@@ -141,6 +143,13 @@ export class TerminalAnnouncer {
    */
   skip(data: string): void {
     const joined = this.pending + data;
+    // A string sequence is open only if the last opener has no terminator after it. Native
+    // searches keep this cheap: a full parse costs ~14x more on unannounced output.
+    const opener = Math.max(...STRING_OPENERS.map((value) => joined.lastIndexOf(value)));
+    if (opener >= 0 && !joined.includes("\x07", opener) && !joined.includes("\x1b\\", opener)) {
+      this.pending = joined.slice(opener);
+      return;
+    }
     const start = joined.lastIndexOf("\x1b");
     this.pending = start < 0 ? "" : stripTerminalControls(joined.slice(start)).pending;
   }
